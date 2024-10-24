@@ -1,4 +1,5 @@
 import pandas as pd
+from sklearn.preprocessing import StandardScaler
 import numpy as np
 
 def preprocess_stock_data(files, seq_length=60, target_column='Close'):
@@ -13,24 +14,35 @@ def preprocess_stock_data(files, seq_length=60, target_column='Close'):
         # Store the dates for alignment
         dates.append(data['Date'].values)
         
-        # Calculate arithmetic returns (percentage change)
-        data['Return'] = data[target_column].pct_change()  # (P_t / P_{t-1}) - 1
+        # Normalize the 'Close' and 'Volume' using StandardScaler for this stock
+        scaler_close = StandardScaler()
+        scaler_volume = StandardScaler()
         
-        # Drop NaN rows created by the return calculation
+        # Normalize the 'Close' and 'Volume' features
+        scaled_close = scaler_close.fit_transform(data[['Close']])
+        scaled_volume = scaler_volume.fit_transform(data[['Volume']])
+
+        # Combine scaled 'Close' and 'Volume' as features
+        stock_features = np.hstack([scaled_close, scaled_volume])
+
+        # Calculate log returns (log of percentage change in 'Close' prices)
+        data['Log_Return'] = np.log(data[target_column] / data[target_column].shift(1))
+        
+        # Drop NaN rows created by the log return calculation
         data = data.dropna().reset_index(drop=True)
 
-        # Collect returns as the target (keep each stock's returns separately)
-        returns = data['Return'].values.reshape(-1, 1)  # Reshape to (len(data), 1)
+        # Collect log returns as the target (keep each stock's returns separately)
+        scaled_returns = data['Log_Return'].values.reshape(-1, 1)  # Reshape to (len(data), 1)
 
         # Build sequence data for LSTM input (time series data)
         sequences = []
-        returns_seq = []
-        for i in range(len(data) - seq_length):
-            sequences.append(data[target_column].values[i:i + seq_length].reshape(-1, 1))  # Use 'Close' prices as features
-            returns_seq.append(returns[i + seq_length - 1])  # Next period's return
+        returns = []
+        for i in range(len(stock_features) - seq_length):
+            sequences.append(stock_features[i:i + seq_length])  # Feature sequence
+            returns.append(scaled_returns[i + seq_length - 1])  # Next period's return
 
         all_stock_features.append(np.array(sequences))  # Feature sequence
-        all_stock_returns.append(np.array(returns_seq))  # Returns for this stock as the target
+        all_stock_returns.append(np.array(returns))  # Log returns for this stock as the target
 
     # Stack sequences for all stocks vertically (as separate samples)
     X_combined = np.vstack(all_stock_features)
@@ -45,4 +57,4 @@ def preprocess_stock_data(files, seq_length=60, target_column='Close'):
     X_scaled = np.array(X_combined[:min_length, :])  # Adjust the feature matrix to match the target length
     y_scaled = np.array(y_combined[:min_length, :])  # Adjust the target matrix to match the feature length
 
-    return X_scaled, y_scaled, dates[:min_length]
+    return X_scaled, y_scaled, dates[:min_length], scaler_close
