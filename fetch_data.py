@@ -14,5 +14,5 @@ def fetch_and_save_data(tickers, folder='data/'):
 if __name__ == "__main__":
     tickers = ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 
                'HINDUNILVR.NS', 'ITC.NS', 'BAJFINANCE.NS', 'KOTAKBANK.NS', 
-               'LT.NS', 'WIPRO.NS','^NSEI']
+               'LT.NS', 'WIPRO.NS']
     fetch_and_save_data(tickers)
