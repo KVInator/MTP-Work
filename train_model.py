@@ -16,7 +16,7 @@ def train_model(data_folder, model_folder, result_folder, target_return=0.001, m
     csv_files = [os.path.join(data_folder, f) for f in os.listdir(data_folder) if f.endswith('.csv')]
     
     # Preprocess data
-    seq_length = 120 
+    seq_length = 60 
     X_scaled, y_scaled, dates, _, _ = preprocess_stock_data(csv_files, seq_length=seq_length)
     X_tensor = torch.tensor(X_scaled, dtype=torch.float32)
     y_tensor = torch.tensor(y_scaled, dtype=torch.float32)
@@ -30,20 +30,20 @@ def train_model(data_folder, model_folder, result_folder, target_return=0.001, m
     train_size = len(dataset) - val_size
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
     
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=7, persistent_workers=True)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=7, persistent_workers=True)
+    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=10, persistent_workers=True)
+    val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False, num_workers=10, persistent_workers=True)
 
     model = LSTMTransformerModel(
         input_dim=input_dim,
         num_assets=num_assets,
-        lstm_hidden_dim1=128,
-        lstm_hidden_dim2=64,
-        transformer_dim=32,
+        lstm_hidden_dim1=64,
+        lstm_hidden_dim2=32,
+        transformer_dim=8,
         num_heads=2,
         seq_length=seq_length,
         init_method="small_random"
     )
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
     print(f"Using device: {device}")
     model = model.to(device)
     
@@ -58,7 +58,7 @@ def train_model(data_folder, model_folder, result_folder, target_return=0.001, m
     )
     early_stopping_callback = EarlyStopping(
         monitor='val_loss',
-        patience=15,
+        patience=20,
         mode='min',
         verbose=True
     )
@@ -82,9 +82,9 @@ def train_model(data_folder, model_folder, result_folder, target_return=0.001, m
         best_model_path,
         input_dim=input_dim,
         num_assets=num_assets,
-        lstm_hidden_dim1=128,
-        lstm_hidden_dim2=64,
-        transformer_dim=32,
+        lstm_hidden_dim1=64,
+        lstm_hidden_dim2=32,
+        transformer_dim=8,
         num_heads=2,
         seq_length=seq_length,
         init_method="small_random"
@@ -111,4 +111,4 @@ if __name__ == "__main__":
     model_folder = "models/"
     result_folder = "results/"
     
-    train_model(data_folder, model_folder, result_folder, target_return=0.001, max_epochs=50)
+    train_model(data_folder, model_folder, result_folder, target_return=0.001, max_epochs=70)

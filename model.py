@@ -4,8 +4,8 @@ import pytorch_lightning as pl
 
 class LSTMTransformerModel(pl.LightningModule):
     def __init__(self, input_dim=5, num_assets=10, lstm_hidden_dim1=512, lstm_hidden_dim2=256, 
-                 transformer_dim=128, num_heads=4, seq_length=50, weight_penalty_factor=0.085, 
-                 dropout_prob=0.2, init_method="small_random"):
+                 transformer_dim=128, num_heads=4, seq_length=50, weight_penalty_factor=0.07, 
+                 dropout_prob=0.4, init_method="small_random"):
         super(LSTMTransformerModel, self).__init__()
         self.seq_length = seq_length
         self.num_assets = num_assets
@@ -20,7 +20,7 @@ class LSTMTransformerModel(pl.LightningModule):
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=lstm_hidden_dim2, nhead=num_heads, dim_feedforward=transformer_dim, dropout=dropout_prob,batch_first=True
         )
-        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=1)
+        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=2)
 
         self.fc = nn.Linear(lstm_hidden_dim2, 1)
         self._init_weights()
@@ -107,8 +107,8 @@ class LSTMTransformerModel(pl.LightningModule):
         self.val_losses.clear()
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=2e-4, weight_decay=2e-5)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=4, threshold=0.001)
+        optimizer = torch.optim.Adam(self.parameters(), lr=5e-3, weight_decay=2e-5)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, threshold=0.001)
         return {
             "optimizer": optimizer,
             "lr_scheduler": scheduler,
