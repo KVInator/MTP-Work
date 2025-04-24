@@ -4,13 +4,14 @@ import pytorch_lightning as pl
 
 class LSTMTransformerModel(pl.LightningModule):
     def __init__(self, input_dim=5, num_assets=10, lstm_hidden_dim1=512, lstm_hidden_dim2=256, 
-                 transformer_dim=128, num_heads=4, seq_length=50, weight_penalty_factor=0.07, 
-                 dropout_prob=0.4, init_method="small_random"):
+                 transformer_dim=128, num_heads=4, seq_length=50, weight_penalty_factor=0.01, 
+                 dropout_prob=0.2, init_method="small_random", portfolio_type="risk_neutral"):
         super(LSTMTransformerModel, self).__init__()
         self.seq_length = seq_length
         self.num_assets = num_assets
         self.weight_penalty_factor = weight_penalty_factor
         self.init_method = init_method
+        self.portfolio_type = portfolio_type  # 🔹 Portfolio type determines loss function
 
         self.lstm1 = nn.LSTM(input_dim, lstm_hidden_dim1, batch_first=True)
         self.dropout1 = nn.Dropout(dropout_prob)
@@ -18,7 +19,7 @@ class LSTMTransformerModel(pl.LightningModule):
         self.dropout2 = nn.Dropout(dropout_prob)
         
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model=lstm_hidden_dim2, nhead=num_heads, dim_feedforward=transformer_dim, dropout=dropout_prob,batch_first=True
+            d_model=lstm_hidden_dim2, nhead=num_heads, dim_feedforward=transformer_dim, dropout=dropout_prob, batch_first=True
         )
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=2)
 
@@ -54,32 +55,48 @@ class LSTMTransformerModel(pl.LightningModule):
         asset_tensor = torch.stack(all_asset_outputs, dim=1)  # Shape: [batch_size, num_assets, lstm_hidden_dim2]
         transformed_output = self.transformer(asset_tensor)
 
-
         portfolio_weights = self.fc(transformed_output).squeeze(-1)  # Shape: [batch_size, num_assets]
-        portfolio_weights = torch.tanh(portfolio_weights)
-        portfolio_weights = portfolio_weights / (portfolio_weights.sum(dim=1, keepdim=True))
+        portfolio_weights = torch.tanh(portfolio_weights)  # 🔹 Allows both long & short positions
+        portfolio_weights = portfolio_weights / (portfolio_weights.sum(dim=1, keepdim=True))  # 🔹 Ensures sum to 1
 
         return portfolio_weights
 
     def compute_loss(self, portfolio_weights, x, y, risk_free_rate=0.04, trading_days=252):
-
-        asset_returns = x[:, -1, 3, :] 
-
+        asset_returns = x[:, -1, 3, :]  # Close price returns
         portfolio_returns = (portfolio_weights * asset_returns).sum(dim=1)
 
         avg_daily_portfolio_return = portfolio_returns.mean()
         daily_excess_return = avg_daily_portfolio_return - risk_free_rate
+        annualized_excess_return = daily_excess_return * (trading_days ** 0.5)
 
-        annualized_excess_return = daily_excess_return * trading_days
         daily_portfolio_risk = portfolio_returns.std()
         annualized_portfolio_risk = daily_portfolio_risk * (trading_days ** 0.5)
 
-        sharpe_loss = -(annualized_excess_return / (annualized_portfolio_risk + 1e-5))
-        weight_penalty = self.weight_penalty_factor * torch.sum((portfolio_weights - 0.5) ** 2)
+        # 🔹 **Stronger Weight Clipping Penalty**
+        excess_weights = torch.abs(portfolio_weights) - 1  
+        excess_penalty = torch.sum(torch.square(torch.relu(excess_weights)))  # Quadratic penalty for large deviations
 
-        total_loss = sharpe_loss + weight_penalty
+        if self.portfolio_type == "risk_averse":
+            # **Sortino Ratio Loss** (Penalizes only downside risk)
+            downside_risk = portfolio_returns[portfolio_returns < 0].std()
+            annualized_downside_risk = downside_risk * (trading_days ** 0.5)
+            sortino_loss = -(annualized_excess_return / (annualized_downside_risk + 1e-4))
+            total_loss = sortino_loss +  0.1*excess_penalty #+ l1_penalty
 
-        return total_loss
+        elif self.portfolio_type == "risk_seeking":
+            # **Return Maximization with Risk Constraint**
+            total_loss = -annualized_excess_return +  0.1*excess_penalty #+ l1_penalty
+
+        else:  # Default: Risk-Neutral (Sharpe Ratio Maximization)
+            sharpe_loss = -(annualized_excess_return / (annualized_portfolio_risk + 1e-4))
+            total_loss = sharpe_loss + 0.1*excess_penalty
+
+        # 🔹 **Entropy Loss (Encourages Diversified Allocation)**
+        entropy_loss = -torch.sum(portfolio_weights * torch.log(torch.abs(portfolio_weights) + 1e-6), dim=1).mean()
+        entropy_loss = entropy_loss / torch.log(torch.tensor(portfolio_weights.shape[1], dtype=torch.float32))
+
+        return total_loss + entropy_loss
+
 
     def training_step(self, batch, batch_idx):
         x, y = batch
@@ -107,8 +124,8 @@ class LSTMTransformerModel(pl.LightningModule):
         self.val_losses.clear()
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=5e-3, weight_decay=2e-5)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, threshold=0.001)
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-5, weight_decay=5e-4)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, threshold=0.001)
         return {
             "optimizer": optimizer,
             "lr_scheduler": scheduler,

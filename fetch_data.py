@@ -1,4 +1,4 @@
-import yfinance as yf
+import yfinance as yf # type: ignore
 import os
 
 def fetch_and_save_data(tickers, folder='data/'):
