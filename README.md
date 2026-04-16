@@ -11,8 +11,7 @@ This repository contains the complete end-to-end pipeline: data collection, feat
 Dual Degree (B.Tech Chemical Engineering + M.Tech Financial Engineering), IIT Kharagpur (2020–2025)
 
 - Email: **vijkartik2002@gmail.com**
-- GitHub: **https://github.com/** *(update with your exact profile URL)*
-- LinkedIn: **https://www.linkedin.com/** *(update with your exact profile URL)*
+- LinkedIn: **[https://www.linkedin.com/](https://www.linkedin.com/in/kartik-vij-cqf-87b6b3207/)**
 
 ---
 
