@@ -1,22 +1,138 @@
-# MTP-Work
-This Repo will contain all the datasets , codes and results of the Master's Thesis Project of Kartik Vij , Roll No. 20CH3FP44.
-He is a Final Year Undergraduate Student at Indian Institute of Technology , Kharagpur
+# Adaptive Portfolio Optimization Across Risk Profiles
 
-1.) "data" folder contains 15 year stock data for BajajFinance , HDFC Bank , HUL , ITC , Infosys , Kotak , Reliance , TCS , Wipro and Larsen
- & Toubro
+A research-focused implementation of my Master's Thesis at **IIT Kharagpur** on building and evaluating a **Hybrid LSTM–Transformer** framework for portfolio allocation under different investor risk appetites.
 
-2.) "model" folder contains the path to the model having the least loss.
+This repository contains the complete end-to-end pipeline: data collection, feature engineering, stock selection, model training, backtesting, and performance evaluation.
 
-3.) "notebooks" store the visualisation codes bu which one is able to check the performance of the model on backtesting data and testing data.
+---
 
-4.) "results" folder contains the .csv files of the weights of the 10 stocks used.
+## Author
+**Kartik Vij**  
+Dual Degree (B.Tech Chemical Engineering + M.Tech Financial Engineering), IIT Kharagpur (2020–2025)
 
-5.) NSEI & NSEI_test are csv files for Nifty 50 against which our model is tested.
+- Email: **vijkartik2002@gmail.com**
+- GitHub: **https://github.com/** *(update with your exact profile URL)*
+- LinkedIn: **https://www.linkedin.com/** *(update with your exact profile URL)*
 
-6.) "fetch_data" and "fetch_data_test" contain code for obtaining the stock data using Yahoo Finance API.
+---
 
-7.) "model" contains the code for architecture of my model , which combines LSTM and Transformer.
+## Project Overview
 
-8.) "preprocess" contains code for preprocessing the stock dataset , which will be used for training , validation and testing of my model.
+### Objective
+Design a practical deep-learning portfolio framework that dynamically allocates capital across equities for three risk profiles:
+- **Risk Averse**
+- **Risk Neutral**
+- **Risk Seeking**
 
-9.) "train_model" and "test_model" contain codes for training and testing the model respectively.
+### Highlights
+- Uses **18 years of NSE equity data** across multiple sectors.
+- Combines sequential modeling (**LSTM**) with cross-asset representation learning (**Transformer**).
+- Generates profile-specific portfolio weights and evaluates out-of-sample performance.
+- Compares strategy behavior against benchmark index data (`^NSEI.csv`, `^NSEI_test.csv`).
+
+---
+
+## Repository Structure
+
+```text
+.
+├── data/                         # Training-period stock price data
+├── test_data/                    # Test-period stock price data
+├── technical_data/               # Technical indicators per stock
+├── fundamental_data/             # Fundamental features per stock
+├── correlation_data/             # Inter-stock correlation artifacts
+├── performance_data/             # Performance summaries and analysis tables
+├── categorized_results/          # Intermediate stock category outputs
+├── results/                      # Final portfolio weights and test allocations
+├── models/
+│   ├── risk_averse/              # Saved model checkpoints (risk-averse)
+│   ├── risk_neutral/             # Saved model checkpoints (risk-neutral)
+│   └── risk_seeking/             # Saved model checkpoints (risk-seeking)
+├── notebooks/                    # Visualizations and exploratory analysis
+├── fetch_data.py                 # Download training data
+├── fetch_data_test.py            # Download test-period data
+├── fetch_technical_data.py       # Build technical indicator dataset
+├── fetch_fundamental_data.py     # Build fundamental feature dataset
+├── compute_correlation.py        # Correlation computation across assets
+├── categorise_stocks.py          # Stock categorization by selected logic
+├── rank_and_select_stocks.py     # Ranking and final stock universe selection
+├── preprocess.py                 # Data preprocessing for model inputs
+├── model.py                      # Hybrid LSTM–Transformer architecture
+├── train_model.py                # Training pipeline
+├── test_model.py                 # Evaluation/testing pipeline
+├── compute_performance_metrics.py# Risk/return performance metrics
+├── ^NSEI.csv                     # Benchmark data (train period)
+└── ^NSEI_test.csv                # Benchmark data (test period)
+```
+
+---
+
+## Pipeline
+
+1. **Data Ingestion**  
+   Fetch market, technical, and fundamental data.
+
+2. **Feature Construction & Selection**  
+   Compute correlations, categorize stocks, and rank/select the investment universe.
+
+3. **Preprocessing**  
+   Transform raw inputs into model-ready tensors.
+
+4. **Model Training**  
+   Train the Hybrid LSTM–Transformer model separately for each risk profile.
+
+5. **Backtesting & Evaluation**  
+   Generate portfolio weights and compute performance metrics against benchmark behavior.
+
+---
+
+## How to Run
+
+> Run from the repository root.
+
+```bash
+# 1) Fetch and prepare datasets
+python fetch_data.py
+python fetch_data_test.py
+python fetch_technical_data.py
+python fetch_fundamental_data.py
+
+# 2) Build selection inputs
+python compute_correlation.py
+python categorise_stocks.py
+python rank_and_select_stocks.py
+
+# 3) Preprocess + train + test
+python preprocess.py
+python train_model.py
+python test_model.py
+
+# 4) Compute final metrics
+python compute_performance_metrics.py
+```
+
+---
+
+## Key Outputs
+
+- **Portfolio weights** for each risk profile in `results/`
+- **Saved model artifacts** in `models/`
+- **Performance summaries** in `performance_data/`
+- **Visual analysis notebooks** in `notebooks/`
+
+---
+
+## Resume Context
+
+This project demonstrates:
+- Time-series modeling for financial decision systems
+- Portfolio construction under practical constraints
+- End-to-end ML research workflow (data to deployable signals)
+- Quantitative performance evaluation for risk-aware investing
+
+---
+
+## Notes
+
+- This is an academic/research project and not investment advice.
+- If you are reviewing this via my resume, feel free to reach out for a walkthrough of methodology, experiments, and results.
