@@ -56,8 +56,8 @@ class LSTMTransformerModel(pl.LightningModule):
         transformed_output = self.transformer(asset_tensor)
 
         portfolio_weights = self.fc(transformed_output).squeeze(-1)  # Shape: [batch_size, num_assets]
-        portfolio_weights = torch.tanh(portfolio_weights)  # 🔹 Allows both long & short positions
-        portfolio_weights = portfolio_weights / (portfolio_weights.sum(dim=1, keepdim=True))  # 🔹 Ensures sum to 1
+        portfolio_weights = torch.tanh(portfolio_weights) 
+        portfolio_weights = portfolio_weights / (portfolio_weights.sum(dim=1, keepdim=True))
 
         return portfolio_weights
 
@@ -72,7 +72,6 @@ class LSTMTransformerModel(pl.LightningModule):
         daily_portfolio_risk = portfolio_returns.std()
         annualized_portfolio_risk = daily_portfolio_risk * (trading_days ** 0.5)
 
-        # 🔹 **Stronger Weight Clipping Penalty**
         excess_weights = torch.abs(portfolio_weights) - 1  
         excess_penalty = torch.sum(torch.square(torch.relu(excess_weights)))  # Quadratic penalty for large deviations
 
